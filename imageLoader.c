@@ -10,6 +10,7 @@
 
 #include<stdio.h>
 #include<stdlib.h>
+#include<string.h>
 
 struct ImageLoader{
    FILE** file;
@@ -17,9 +18,18 @@ struct ImageLoader{
    char* buffer;
 } ImageLoader;
 
+struct ImageChecker{
+   unsigned char* check;
+   size_t byte;
+} ImageChecker;
+
+const unsigned char png[8] = {137, 80, 78, 71, 13, 10, 26, 10}; 
+const unsigned char jpg[3] = {255, 216, 255};
+const unsigned char bmp[2] = {66, 77};
+
 //opening and checking file size
-void fileInitialize( struct ImageLoader* img, int n,
-                     char* path_file1, char* path_file2){
+void fileInitialize( struct ImageLoader* img, struct ImageChecker* img_checker,
+                     int n, char* path_file1, char* path_file2){
    
    /*
     * n represent how much FILE* we wanted to have in our FILE* pointer.
@@ -31,6 +41,12 @@ void fileInitialize( struct ImageLoader* img, int n,
     */
 
    img->file = malloc(n*sizeof(FILE*));
+
+   /*
+    * Optional (Creating space to to check opened images)
+    */
+
+   img_checker->check = malloc(8);
 
    /*
     * Opening file, standard operation.
@@ -69,10 +85,16 @@ void fileInitialize( struct ImageLoader* img, int n,
    fseek(img->file[0], 0, SEEK_END);
    img->size = ftell(img->file[0]);
    rewind(img->file[0]);
+
+   /*
+    * Reading and transfering 8 byte on first line of file images into check stream
+    */
+
+   img_checker->byte = fread(img_checker->check, 1, 8, img->file[0]); 
 }
 
 //free dynamic allocated data
-void fileRelease(struct ImageLoader* img){
+void fileRelease(struct ImageLoader* img, struct ImageChecker* img_checker){
    
    /*
     * Every FILE* that been used/open need to be close once we finished.
@@ -87,12 +109,16 @@ void fileRelease(struct ImageLoader* img){
     *    Example: Such as crash, segmented augmentation, etc...
    */
 
+   free(img_checker->check);
    free(img->buffer);
    free(img->file);
 }
 
 //byte extraction from image using pointer
-void fileOperating(struct ImageLoader* img){
+void fileOperating(  struct ImageLoader* img, struct ImageChecker* img_checker,
+                     const unsigned char* f1, 
+                     const unsigned char* f2,
+                     const unsigned char* f3  ){
 
    /*
     * Buffer need to allocated using malloc.
@@ -120,21 +146,38 @@ void fileOperating(struct ImageLoader* img){
    */
 
    while(fgets(img->buffer, sizeof(img->buffer), img->file[0])){
-      printf("%s", img->buffer);
+      //printf("%s", img->buffer);
       fputs(img->buffer, img->file[1]);
    }
+   
+   /*
+    * Checking the file type
+    */
+
+   if(memcmp(img_checker->check, f1, 8) == 0){
+      printf("This are PNG format\n");
+   }
+   else if(memcmp(img_checker->check, f2, 3) == 0){
+      printf("This are JPG format\n");
+   }
+   else if(memcmp(img_checker->check, f3, 2) == 0){
+      printf("This are BMP format\n");
+   }
+
 }
 
 int main(void){
 
    struct ImageLoader image;
+   struct ImageChecker image_checker;
 
-   fileInitialize(&image, 2,
+   fileInitialize(&image, &image_checker,
+                  2,
                   "src/image.png",
                   "src/image.txt");
 
-   fileOperating(&image);
-   fileRelease(&image);
+   fileOperating(&image, &image_checker, png, jpg, bmp);
+   fileRelease(&image, &image_checker);
 
 /* 
  * Original Idea Before Refactoring
