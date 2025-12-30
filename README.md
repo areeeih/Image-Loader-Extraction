@@ -21,3 +21,6 @@ LOG#1.0
 * FILE able to read images.
 * FILE able to extract raw byte data of images.
 * FILE able to print byte data into .txt file.
+
+LOG #1.1
+* Checking images format which are PNG, JPG, BMP
